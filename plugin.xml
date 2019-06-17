@@ -5,6 +5,12 @@
 .node:hover {
   fill: lightblue;
 }
+.fade {
+  opacity: 0.2;
+}
+.fade:hover {
+  opacity: 1.0;
+}
 .arrow-path {
   stroke: blue;
 }
@@ -16,6 +22,12 @@
 
 <script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js"></script>
 <script>
+
+// configure to switch hilight effect
+const HILIGHT = 1;
+const FADE = 2;
+var style = HILIGHT;
+
 $(document).ready(function() {
 var allNodes = $('.node');
 var allEdges = $('.edge');
@@ -26,14 +38,20 @@ var nodeAreas = allNodes.find('[fill]'); // including text
 nodeAreas.click(function() {
   // TODO: only nodes and edges, which can be recorded, modified should be
   //       considered
+  var nonHiClass = style == FADE ? 'fade' : 'none';
+  var hiClass = style == FADE ? 'none' : 'node';
+  var arrowPathClass = style == FADE ? 'none' : 'arrow-path';
+  var arrowHeadTailClass = style == FADE ? 'none'  : 'arrow-head-tail';
+  var arrowTextClass = 'none'; // always remains none;
+
   allNodes.each(function(index) {
-    $(this).find('[fill]:not(text)').attr('class', 'none');
+    $(this).find('[fill]:not(text)').attr('class', nonHiClass);
   });
   allEdges.each(function(index) {
-    $(this).find('[class]').attr('class', 'none');
+    $(this).find('*').attr('class', nonHiClass);
   });
   // paint current node first
-  $(this).parent().find('[fill]:not(text)').attr('class', 'node');
+  $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
   // console.log($(this).parent());
   // console.log(title);
   var highlight = function(title) {
@@ -43,8 +61,9 @@ nodeAreas.click(function() {
       var arrow = $(this).text().split('->'); // &#45;&gt;
       if (arrow[0] === title || arrow[1] === title) {
         // TODO: compare nodes that arrow heads attatched to
-        $(this).parent().find('path').attr('class', 'arrow-path');
-        $(this).parent().find('polygon').attr('class', 'arrow-head-tail');
+        $(this).parent().find('path').attr('class', arrowPathClass);
+        $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
+        $(this).parent().find('text').attr('class', 'arrowTextClass');
         // console.log(arrow);
         arrow.forEach(function(item, arrowIndex) {
           // console.log(strs[index]);
@@ -53,11 +72,11 @@ nodeAreas.click(function() {
             if (!($(this).text() === arrow[0])) {
               return;
             }
-            if ($(this).parent().find('[fill]').attr('class') === 'node') {
+            if ($(this).parent().find('[fill]').attr('class') === hiClass) {
               return;
             }
-            $(this).parent().find('[fill]:not(text)').attr('class', 'node');
-            highlight($(this).text());
+            $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
+            highlight(arrow[0]);
           });
         });
       }
