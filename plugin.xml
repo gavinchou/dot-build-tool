@@ -36,21 +36,21 @@ var allEdgeTitles = allEdges.find('title');
 var nodeAreas = allNodes.find('[fill]'); // including text
 
 nodeAreas.click(function() {
-  // TODO: only nodes and edges, which can be recorded, modified should be
-  //       considered
   var nonHiClass = style == FADE ? 'fade' : 'none';
   var hiClass = style == FADE ? 'none' : 'node';
   var arrowPathClass = style == FADE ? 'none' : 'arrow-path';
   var arrowHeadTailClass = style == FADE ? 'none'  : 'arrow-head-tail';
   var arrowTextClass = 'none'; // always remains none;
 
+  // TODO: only nodes and edges, which can be recorded, modified should be
+  //       considered
   allNodes.each(function(index) {
     $(this).find('[fill]:not(text)').attr('class', nonHiClass);
   });
   allEdges.each(function(index) {
     $(this).find('*').attr('class', nonHiClass);
   });
-  // paint current node first
+  // highlight current node first
   $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
   // console.log($(this).parent());
   // console.log(title);
@@ -59,27 +59,25 @@ nodeAreas.click(function() {
     allEdgeTitles.each(function(index) {
       // console.log($(this).text());
       var arrow = $(this).text().split('->'); // &#45;&gt;
-      if (arrow[0] === title || arrow[1] === title) {
-        // TODO: compare nodes that arrow heads attatched to
-        $(this).parent().find('path').attr('class', arrowPathClass);
-        $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
-        $(this).parent().find('text').attr('class', 'arrowTextClass');
-        // console.log(arrow);
-        arrow.forEach(function(item, arrowIndex) {
-          // console.log(strs[index]);
-          allNodeTitles.each(function(index) {
-            // process parent node only
-            if (!($(this).text() === arrow[0])) {
-              return;
-            }
-            if ($(this).parent().find('[fill]').attr('class') === hiClass) {
-              return;
-            }
-            $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
-            highlight(arrow[0]);
-          });
-        });
+      if (!(arrow[0] === title || arrow[1] === title)) {
+        return;
       }
+      // TODO: compare nodes that arrow heads attatched to
+      $(this).parent().find('path').attr('class', arrowPathClass);
+      $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
+      $(this).parent().find('text').attr('class', 'arrowTextClass');
+      // console.log(arrow);
+      allNodeTitles.each(function(index) {
+        // process parent node only
+        if (!($(this).text() === arrow[0])) {
+          return;
+        }
+        if ($(this).parent().find('[fill]').attr('class') === hiClass) {
+          return;
+        }
+        $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
+        highlight(arrow[0]);
+      });
     });
   };
   var clickedTitle = $(this).parent().find('title').text();
