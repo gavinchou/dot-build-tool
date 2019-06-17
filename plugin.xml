@@ -1,0 +1,74 @@
+<style>
+.node {
+  fill: blue;
+}
+.node:hover {
+  fill: lightblue;
+}
+.arrow-path {
+  stroke: blue;
+}
+.arrow-head-tail {
+  fill: blue;
+  stroke: blue;
+}
+</style>
+
+<script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js"></script>
+<script>
+$(document).ready(function() {
+var allNodes = $('.node');
+var allEdges = $('.edge');
+var allNodeTitles = allNodes.find('title');
+var allEdgeTitles = allEdges.find('title');
+var nodeAreas = allNodes.find('[fill]'); // including text
+
+nodeAreas.click(function() {
+  // TODO: only nodes and edges, which can be recorded, modified should be
+  //       considered
+  allNodes.each(function(index) {
+    $(this).find('[fill]:not(text)').attr('class', 'none');
+  });
+  allEdges.each(function(index) {
+    $(this).find('[class]').attr('class', 'none');
+  });
+  // paint current node first
+  $(this).parent().find('[fill]:not(text)').attr('class', 'node');
+  // console.log($(this).parent());
+  // console.log(title);
+  var highlight = function(title) {
+    // for all adj, Node
+    allEdgeTitles.each(function(index) {
+      // console.log($(this).text());
+      var arrow = $(this).text().split('->'); // &#45;&gt;
+      if (arrow[0] === title || arrow[1] === title) {
+        // TODO: compare nodes that arrow heads attatched to
+        $(this).parent().find('path').attr('class', 'arrow-path');
+        $(this).parent().find('polygon').attr('class', 'arrow-head-tail');
+        // console.log(arrow);
+        arrow.forEach(function(item, arrowIndex) {
+          // console.log(strs[index]);
+          allNodeTitles.each(function(index) {
+            // process parent node only
+            if (!($(this).text() === arrow[0])) {
+              return;
+            }
+            if ($(this).parent().find('[fill]').attr('class') === 'node') {
+              return;
+            }
+            $(this).parent().find('[fill]:not(text)').attr('class', 'node');
+            highlight($(this).text());
+          });
+        });
+      }
+    });
+  };
+  var clickedTitle = $(this).parent().find('title').text();
+  highlight(clickedTitle);
+});
+
+});
+</script>
+<!--
+vim: et ts=2 sw=2 ft=javascript:
+-->
