@@ -1,0 +1,128 @@
+digraph bthread {
+  bgcolor="#eeeeee"
+  node [color="#555555" fontcolor="#ffffff" style=filled shape=ellipse fontsize=8.0]
+  edge [fontsize=7.0]
+
+  // s/\(^ *\)\([^ ]\+\)::\(.*\)/\1\2_\3 [label="\2::\3"]/
+subgraph cluster_execution_queue {
+  bthread_execution_queue_start [label="bthread::execution_queue_start"]
+  bthread_execution_queue_start_anno [label="create an exec queue\nand return the queue id as output param" shape=note]
+  ExecutionQueue_create [label="ExecutionQueue::create"]
+  ExecutionQueueBase_create [label="ExecutionQueueBase::create"]
+  ExecutionQueueBase_create_anno [label="initialize execution queue member vars" shape=note]
+  bthread_execution_queue_execute [label="bthread::execution_queue_execute"]
+  ExecutionQueue_execute [label="ExecutionQueue::execute"]
+  ExecutionQueue_allocate_node [label="ExecutionQueue::allocate_node"]
+  TaskNode_TaskNode [label="TaskNode::TaskNode"]
+  ExecutionQueueBase_start_execute [label="ExecutionQueueBase::start_execute"]
+  ExecutionQueueBase_exchange_head [label="_head.exchange(node, mo_release)\n//exchange is enough\nbecase &_head is unchanged"]
+  ExecutionQueueBase__execute [label="ExecutionQueueBase::_execute"]
+  ExecutionQueueBase__execute_tasks [label="ExecutionQueueBase::_execute_tasks"]
+  ExecutionQueueBase__execute_tasks_anno [shape=note label="contains a loop that keeps the queue running"]
+  ExecutionQueueBase_return_task_node [label="ExecutionQueueBase::return_task_node"]
+  ExecuttonQueeuBase_Start_execute_inplace [label="inpalce execution"]
+  bthread_start_urgent [label="bthread_start_urgent"]
+  bthread_start_background [label="bthread_start_background"]
+  ExecutionQueueBase__more_tasks [label="ExecutionQueueBase::_more_tasks"]
+  ExecuttonQueeuBase__execute_func [label="_execute_func(\n_meta, _type_specific_function, iter)" color=red]
+  ExecuttonQueeuBase__execute_func_anno [label="this is the user function\nuser function must iterate all the TaskNodes to execute\nif not iterated there may be some tasks not excuted\nthis is bad because the user logic couples with the queue's" shape=note color=brown]
+  TaskIteratorBase_TaskIteratorBase [label="TaskIteratorBase::TaskIteratorBase"]
+  ExecutionQueueBase__more_tasks_new_head [label="_head.compare_exchange_strong(new_head, desired)"]
+  ExecutionQueueBase__more_tasks_reverse_queue [label="reverse the partial exec queue"]
+  ExecutionQueueBase__execute_tasks_loop [label="execute tasks loop"]
+
+  bthread_execution_queue_start -> ExecutionQueue_create
+  bthread_execution_queue_start -> bthread_execution_queue_start_anno [style=dashed arrowhead=none]
+  ExecutionQueue_create -> ExecutionQueueBase_create
+  ExecutionQueueBase_create -> ExecutionQueueBase_create_anno [style=dashed arrowhead=none]
+  bthread_execution_queue_execute -> ExecutionQueue_execute
+  ExecutionQueue_execute -> ExecutionQueue_allocate_node [label="1"]
+  ExecutionQueue_execute -> TaskNode_TaskNode [label="2. inplacement new"]
+  ExecutionQueue_execute -> ExecutionQueueBase_start_execute [label="3"]
+  ExecutionQueueBase_start_execute -> ExecutionQueueBase_exchange_head [label="1. append to head of queue"]
+  ExecutionQueueBase_start_execute -> "return;" [label="2. if queue is not empty"]
+  ExecutionQueueBase_start_execute -> ExecuttonQueeuBase_Start_execute_inplace [label="3. if inplace"]
+  ExecuttonQueeuBase_Start_execute_inplace -> ExecutionQueueBase__execute [label="1. execute directly"]
+  ExecuttonQueeuBase_Start_execute_inplace -> ExecutionQueueBase__more_tasks [label="2."]
+  ExecuttonQueeuBase_Start_execute_inplace -> ExecutionQueueBase_return_task_node [label="3 if there is no more tasks\nrelease memory return"]
+  ExecutionQueueBase_start_execute -> bthread_start_urgent [label="4. if urgent, create bthread and run"]
+  ExecutionQueueBase_start_execute -> bthread_start_background [label="5. if !urgent, create bthread\nput to bthread queue"]
+  bthread_start_urgent -> ExecutionQueueBase__execute_tasks
+  bthread_start_background -> ExecutionQueueBase__execute_tasks
+  ExecutionQueueBase_start_execute -> ExecutionQueueBase__execute_tasks [label="6. if failed to run in bthread"]
+  ExecutionQueueBase__execute -> ExecuttonQueeuBase__execute_func [label="1. if head != NULL && head->stop_task\nexecute head task and return ESTOP"]
+  ExecuttonQueeuBase__execute_func -> ExecuttonQueeuBase__execute_func_anno [style=dashed arrowhead=none]
+  ExecutionQueueBase__execute -> TaskIteratorBase_TaskIteratorBase [label="2. create a task iterator for excution"]
+  ExecutionQueueBase__execute -> ExecuttonQueeuBase__execute_func [label="3. if iter valid"]
+  ExecutionQueueBase__more_tasks -> ExecutionQueueBase__more_tasks_new_head [label="1."]
+  ExecutionQueueBase__more_tasks -> "return" [label="2. if exchange failed\nno new nodes appended to the _head" color=red]
+  ExecutionQueueBase__more_tasks -> ExecutionQueueBase__more_tasks_reverse_queue [label="3."]
+
+  ExecutionQueueBase__execute_tasks_loop_release [label="release memory of task node"]
+  ExecutionQueueBase__execute_tasks_loop_find_tail [label="find current tail for reversing" color=red]
+  ExecutionQueueBase__execute_tasks_loop_refresh_cur_head [label="Release TaskNode until\nuniterated task or last task\nrefresh cur head for next run"]
+  ExecutionQueueBase__execute_tasks_destroy [label="destroy queue"]
+
+  ExecutionQueueBase__execute_tasks -> ExecutionQueueBase__execute_tasks_loop [label="1"]
+  ExecutionQueueBase__execute_tasks_loop -> ExecutionQueueBase__execute_tasks_loop_release [label="1. if current node executed"]
+  ExecutionQueueBase__execute_tasks_loop -> ExecutionQueueBase__execute [label="2. run current node\nwith corresponding priority" fontcolor=red]
+  ExecutionQueueBase__execute_tasks_loop -> ExecutionQueueBase__execute_tasks_loop_refresh_cur_head [label="3"]
+  ExecutionQueueBase__execute_tasks_loop -> ExecutionQueueBase__execute_tasks_loop_find_tail [label="4. if cur_tail == null"]
+  ExecutionQueueBase__execute_tasks_loop -> ExecutionQueueBase__more_tasks [label="5. find more tasks to run\nget "]
+  ExecutionQueueBase__execute_tasks -> ExecutionQueueBase__execute_tasks_destroy [label="2. if it found queue stopped when looping"]
+  ExecutionQueueBase__execute_tasks -> ExecutionQueueBase__execute_tasks_anno [style=dashed arrowhead=none]
+
+}
+
+subgraph cluster_before_more_tasks {
+  label="queue status before checking for more tasks\nthis is the most complicated situation"
+  node [shape=box fontsize=14 color=blue]
+  before9 [label="9"]
+  before8 [label="8"]
+  before7 [label="7"]
+  before6 [label="6"]
+  before5 [label="5"]
+  before_null -> before_tail_anno [style=dashed arrowhead=none]
+  node [shape=ellipse color=darkgreen]
+  before_null [label="null"]
+  before_new_head [label="new_head"]
+  before_old_head [label="old_head"]
+  before__head [label="_head"]
+  { rank=same before9 -> before8 -> before7 -> before6 -> before5 -> before_null }
+  before9 -> before__head [dir=back arrowhead=none arrowtail=normal]
+  before7 -> before_new_head [dir=back arrowhead=none arrowtail=normal]
+  before5 -> before_old_head [dir=back arrowhead=none arrowtail=normal]
+  before_tail_anno [label="there must be NULL when it checks for more tasks\nbecause when it comes to old_head for execution\nthere was only that node of head at that time" color=brown shape=note fontsize=8]
+}
+
+subgraph cluster_after_more_tasks {
+  label="queue status after checking for more tasks\nthis is the most complicated situation"
+  node [shape=box fontsize=14 color=blue]
+  after9 [label="9"]
+  after8 [label="8"]
+  after7 [label="7"]
+  after6 [label="6"]
+  after5 [label="5"]
+  after_null [label="null"]
+  node [shape=ellipse color=darkgreen]
+  after_new_head [label="new_head"]
+  after_new_tail [label="new_tail\n(as next old_head)" fontsize=10]
+  after_old_head [label="old_head"]
+  after__head [label="_head"]
+  {
+    rank=same after9 -> after8 -> after7
+    after7 -> after6 [dir=back arrowhead=none arrowtail=normal]
+    after6 -> after5 [dir=back arrowhead=none arrowtail=normal]
+  }
+  after7 -> after_null
+  after9 -> after__head [dir=back arrowhead=none arrowtail=normal]
+  after7 -> after_new_head [dir=back arrowhead=none arrowtail=normal]
+  after7 -> after_new_tail [dir=back arrowhead=none arrowtail=normal]
+  after5 -> after_old_head [dir=back arrowhead=none arrowtail=normal]
+}
+
+ExecuttonQueeuBase__execute_func_anno -> after_old_head [style=dashed arrowhead=none constraint=false color=red]
+ExecutionQueueBase__more_tasks -> after_old_head [style=dashed arrowhead=none constraint=false color=red]
+
+}
+// vim: et tw=180 ts=2 sw=2 cc=80:
