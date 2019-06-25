@@ -12,7 +12,7 @@ if [ "x${file}" == "x" ]; then
   file=$0
 fi
 pushd "$(dirname ${file})" > /dev/null
-attach=`pwd -P`/plugin.xml
+attach=`pwd -P`/call_graph_highlight_plugin.xml
 popd > /dev/null
 
 src=$1
@@ -26,6 +26,7 @@ fi
 if [ "x${src}" == "x" ]; then
   echo "usage:"
   echo "  $0 "'${src} ${out}'
+  exit -1
 fi
 
 if [ "x${out}" == "x" ]; then
