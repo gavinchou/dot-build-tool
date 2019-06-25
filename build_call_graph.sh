@@ -44,8 +44,16 @@ else
 fi
 
 # echo ${out}
+which dot > /dev/null
+if [ $? -ne 0 ]; then
+	echo "no graphviz dot found"
+	exit -1
+fi
 
 dot -Tsvg -o ${out} ${src} > /dev/null
-sed -ri 's#</svg>##' ${out}
+
+sed -i.bak 's#</svg>##' ${out}
+rm -f ${out}.bak
+
 cat "${attach}" >> ${out}
 echo "</svg>" >> ${out}

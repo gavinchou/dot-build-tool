@@ -19,7 +19,6 @@ will be faded away.
 0. dot - graphviz version 2.41.20190308.1641 (20190308.1641)
 	* new versions should work, if not I will fix it
 	* lower versions may work, but not tested yet, I am lazy...
-1. GNU sed, if you don't have one, modify the build script to fit the purpose
 
 ### usage
 
