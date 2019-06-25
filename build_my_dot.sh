@@ -1,7 +1,6 @@
 #!/bin/bash
 ## @brief  build dot file to svg with js plugin embedded
-## @author zhoufei
-## @email  zhoufei05@baidu.com
+## @email  gavineaglechou@gmail.com
 ## @date   2019-06-17-Mon
 
 cwd=`pwd`
@@ -26,6 +25,11 @@ fi
 if [ "x${src}" == "x" ]; then
   echo "usage:"
   echo "  $0 "'${src} ${out}'
+  exit -1
+fi
+
+if [ ! -f ${src} ]; then
+  echo "src: ${src} not found, unable to continue"
   exit -1
 fi
 
