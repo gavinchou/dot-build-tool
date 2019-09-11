@@ -43,69 +43,148 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 <script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js"></script>
 <script>
+<![CDATA[
 
-// configure to switch hilight effect
-const HILIGHT = 1;
+// configure to switch highlight effect
+const HIGHLIGHT = 1;
 const FADE = 2;
-var style = HILIGHT;
+var style = HIGHLIGHT;
+
+function processClick() {
+  var allNodes = $('.node');
+  var allEdges = $('.edge');
+  var allNodeTitles = allNodes.find('title');
+  var allEdgeTitles = allEdges.find('title');
+  var nodeAreas = allNodes.find('[fill]'); // including text
+
+  nodeAreas.click(function() {
+    var nonHiClass = style == FADE ? 'fade' : 'none';
+    var hiClass = style == FADE ? 'none' : 'node';
+    var arrowPathClass = style == FADE ? 'none' : 'arrow-path';
+    var arrowHeadTailClass = style == FADE ? 'none'  : 'arrow-head-tail';
+    var arrowTextClass = 'none'; // always remains none;
+
+    // TODO: only nodes and edges, which can be recorded, modified should be
+    //       considered
+    allNodes.each(function(index) {
+      $(this).find('[fill]:not(text)').attr('class', nonHiClass);
+    });
+    allEdges.each(function(index) {
+      $(this).find('*').attr('class', nonHiClass);
+    });
+    // highlight current node first
+    $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
+    // console.log($(this).parent());
+    // console.log(title);
+    var highlight = function(title) {
+      // for all adj, Node
+      allEdgeTitles.each(function(index) {
+        // console.log($(this).text());
+        var arrow = $(this).text().split('->'); // &#45;&gt;
+        if (!(arrow[0] === title || arrow[1] === title)) {
+          return;
+        }
+        // TODO: compare nodes that arrow heads attatched to
+        $(this).parent().find('path').attr('class', arrowPathClass);
+        $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
+        $(this).parent().find('text').attr('class', 'arrowTextClass');
+        // console.log(arrow);
+        allNodeTitles.each(function(index) {
+          // process parent node only
+          if (!($(this).text() === arrow[0])) {
+            return;
+          }
+          if ($(this).parent().find('[fill]').attr('class') === hiClass) {
+            return;
+          }
+          $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
+          highlight(arrow[0]);
+        });
+      });
+    };
+    var clickedTitle = $(this).parent().find('title').text();
+    highlight(clickedTitle);
+  });
+}
+
+
+scaleX = 1
+scaleY = 1
+scaleStep = 0.10
+lastZoom = -1
+const minZoomDelta = 30.0
+function processZoom() {
+  svg = $('svg');
+
+  scaleX = parseInt(svg.attr('width').substr(0, svg.attr('width').length - 2))
+  scaleY = parseInt(svg.attr('height').substr(0, svg.attr('height').length - 2))
+
+  wheelHandle = function (evt) {
+    if (evt.ctrlKey == true) {
+      evt.preventDefault();
+      // console.log(evt.wheelDelta + ' ' + Date.now() + ' ' + scaleX + ' ' + scaleY)
+      if (lastZoom > 0 && Date.now() - lastZoom < minZoomDelta) {
+        return false
+      }
+      rate = 0;
+      if (evt.wheelDelta / 120 > 0) {
+        // zoom in
+        rate = scaleStep
+        // console.log('scroll up');
+        rate = (1 + scaleStep)
+      } else {
+        // zoom out
+        // console.log('scroll down');
+        rate = 1 / (1 + scaleStep)
+      }
+      scaleX = parseInt(scaleX * rate + 0.5)
+      scaleY = parseInt(scaleY * rate + 0.5)
+
+      svg.attr('width', scaleX + 'pt')
+      svg.attr('height', scaleY + 'pt')
+      // console.log('new size ' + scaleX + ' ' + scaleY + ' ' + evt.screenX + ' ' + evt.screenY)
+
+      // get pointer offset in view ratio offset within svg
+      // the ratio of cursor's position to the svg's top-left remains the same
+      // after zooming/scrolling:
+      // oldCursorX / oldSvgWidth == newCursorX / newSvgWidth
+      // oldCursorX = oldScrollX + evt.screenX
+      // newCursorX = newScrollX + evt.screenX
+      oldScrollX = window.pageXOffset
+      oldScrollY = window.pageYOffset
+      scrollX = 0
+      scrollY = 0
+      if (scaleX > window.innerWidth) {
+        scrollX = parseInt((oldScrollX + evt.screenX) * rate - evt.screenX + 0.5)
+      }
+      if (scaleY > window.innerHeight) {
+        scrollY = parseInt((oldScrollY + evt.screenY) * rate - evt.screenY + 0.5)
+      }
+      window.scroll({top: scrollY, left: scrollX, behavor: 'smooth'})
+      // console.log('scroll to fit cursor ' + scrollX + ' ' + scrollY)
+
+      lastZoom = Date.now()
+
+      // svg.attr('transform', 'scale(' + scaleX + ' ' + scaleY + ') ' + translate)
+      // consume the event
+      return false
+    }
+    return true
+  }
+  window.addEventListener("mousewheel", wheelHandle, {passive: false});
+}
+
+function instruction() {
+  alert("* click any node to show specific path\n* ctrl+scroll to zoom");
+}
 
 $(document).ready(function() {
-var allNodes = $('.node');
-var allEdges = $('.edge');
-var allNodeTitles = allNodes.find('title');
-var allEdgeTitles = allEdges.find('title');
-var nodeAreas = allNodes.find('[fill]'); // including text
-
-nodeAreas.click(function() {
-  var nonHiClass = style == FADE ? 'fade' : 'none';
-  var hiClass = style == FADE ? 'none' : 'node';
-  var arrowPathClass = style == FADE ? 'none' : 'arrow-path';
-  var arrowHeadTailClass = style == FADE ? 'none'  : 'arrow-head-tail';
-  var arrowTextClass = 'none'; // always remains none;
-
-  // TODO: only nodes and edges, which can be recorded, modified should be
-  //       considered
-  allNodes.each(function(index) {
-    $(this).find('[fill]:not(text)').attr('class', nonHiClass);
-  });
-  allEdges.each(function(index) {
-    $(this).find('*').attr('class', nonHiClass);
-  });
-  // highlight current node first
-  $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
-  // console.log($(this).parent());
-  // console.log(title);
-  var highlight = function(title) {
-    // for all adj, Node
-    allEdgeTitles.each(function(index) {
-      // console.log($(this).text());
-      var arrow = $(this).text().split('->'); // &#45;&gt;
-      if (!(arrow[0] === title || arrow[1] === title)) {
-        return;
-      }
-      // TODO: compare nodes that arrow heads attatched to
-      $(this).parent().find('path').attr('class', arrowPathClass);
-      $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
-      $(this).parent().find('text').attr('class', 'arrowTextClass');
-      // console.log(arrow);
-      allNodeTitles.each(function(index) {
-        // process parent node only
-        if (!($(this).text() === arrow[0])) {
-          return;
-        }
-        if ($(this).parent().find('[fill]').attr('class') === hiClass) {
-          return;
-        }
-        $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
-        highlight(arrow[0]);
-      });
-    });
-  };
-  var clickedTitle = $(this).parent().find('title').text();
-  highlight(clickedTitle);
+  processClick();
+  processZoom();
+  instruction();
 });
 
-});
+]]>
 </script>
 <!--
 vim: et ts=2 sw=2 ft=javascript:
