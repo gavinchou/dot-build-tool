@@ -1,5 +1,8 @@
 <!--
+The following is the call graph plugin.
+
 Copyright 2019, Gavin Chou, gavineaglechou@gmail.com
+http://github.com/gavinchou/dot-build-tool.git
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -41,7 +44,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
 </style>
 
-<script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js"></script>
+<script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js">
+</script>
 <script>
 <![CDATA[
 
@@ -125,7 +129,7 @@ scaleX = 1
 scaleY = 1
 scaleStep = 0.10
 lastZoom = -1
-const minZoomDelta = 30.0
+const minZoomInterval = 30.0
 
 function processZoom() {
   svg = $('svg');
@@ -136,8 +140,9 @@ function processZoom() {
   wheelHandle = function (evt) {
     if (evt.ctrlKey == true) {
       evt.preventDefault();
-      // console.log(evt.wheelDelta + ' ' + Date.now() + ' ' + scaleX + ' ' + scaleY)
-      if (lastZoom > 0 && Date.now() - lastZoom < minZoomDelta) {
+      // console.log(
+      //        evt.wheelDelta + ' ' + Date.now() + ' ' + scaleX + ' ' + scaleY)
+      if (lastZoom > 0 && Date.now() - lastZoom < minZoomInterval) {
         return false
       }
       rate = 0;
@@ -156,7 +161,8 @@ function processZoom() {
 
       svg.attr('width', scaleX + 'pt')
       svg.attr('height', scaleY + 'pt')
-      // console.log('new size ' + scaleX + ' ' + scaleY + ' ' + evt.screenX + ' ' + evt.screenY)
+      // console.log('new size ' + scaleX + ' ' + scaleY + ' ' + evt.screenX
+      //              + ' ' + evt.screenY)
 
       // get pointer offset in view ratio offset within svg
       // the ratio of cursor's position to the svg's top-left remains the same
@@ -169,17 +175,18 @@ function processZoom() {
       scrollX = 0
       scrollY = 0
       if (scaleX > window.innerWidth) {
-        scrollX = parseInt((oldScrollX + evt.screenX) * rate - evt.screenX + 0.5)
+        scrollX = parseInt(
+                          (oldScrollX + evt.screenX) * rate - evt.screenX + 0.5)
       }
       if (scaleY > window.innerHeight) {
-        scrollY = parseInt((oldScrollY + evt.screenY) * rate - evt.screenY + 0.5)
+        scrollY = parseInt(
+                          (oldScrollY + evt.screenY) * rate - evt.screenY + 0.5)
       }
       window.scroll({top: scrollY, left: scrollX, behavor: 'smooth'})
       // console.log('scroll to fit cursor ' + scrollX + ' ' + scrollY)
 
       lastZoom = Date.now()
 
-      // svg.attr('transform', 'scale(' + scaleX + ' ' + scaleY + ') ' + translate)
       // consume the event
       return false
     }
