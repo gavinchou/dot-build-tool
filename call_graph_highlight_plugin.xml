@@ -61,6 +61,12 @@ function processClick() {
   var allEdgeTitles = allEdges.find('title');
   var nodeAreas = allNodes.find('[fill]'); // including text
 
+  var urlParams = new URLSearchParams(location.search);
+  var s = urlParams.get("highlightStyle");
+  if (s != null) {
+    style = s == "fade" ? FADE : s == "highlight" ? HIGHLIGHT : style;
+  }
+
   var nonHiClass = style == FADE ? 'fade' : 'none';
   var hiClass = style == FADE ? 'none' : 'node';
   var arrowPathClass = style == FADE ? 'none' : 'arrow-path';
@@ -195,7 +201,11 @@ function processZoom() {
   window.addEventListener("mousewheel", wheelHandle, {passive: false});
 }
 
+var show_instruction = true
 function instruction() {
+  if (!show_instruction) {
+    return
+  }
   inst = "* click any node to highlight specific path\n"
   inst += "* press ESC to cancel highlight\n"
   inst += "* ctrl+scroll to zoom in/out"
