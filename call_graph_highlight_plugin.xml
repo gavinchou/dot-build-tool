@@ -137,8 +137,31 @@ scaleStep = 0.10
 lastZoom = -1
 const minZoomInterval = 30.0
 
+/**
+ * @param svg the svg to resize
+ * @relies
+ */
+function resizeView(svg) {
+  var windowWidth = window.innerWidth;
+  var windowHeight = window.innerHeight;
+  var unit = svg.attr('width').substr(-2);
+  if (!isNaN(parseInt(unit))) unit = "";
+  var svgWidth = parseInt(svg.attr('width').substr(0, svg.attr('width').length - unit.length));
+  var svgHeight = parseInt(svg.attr('height').substr(0, svg.attr('height').length - unit.length));
+  // TODO: consider unit
+
+  var scale = Math.min(windowWidth / svgWidth, windowHeight / svgHeight);
+  svgWidth = Math.floor(svgWidth * scale);
+  svgHeight = Math.floor(svgHeight * scale);
+
+  svg.attr('width',  svgWidth + unit);
+  svg.attr('height', svgHeight + unit);
+}
+
 function processZoom() {
   svg = $('svg');
+
+  resizeView(svg);
 
   scaleX = parseInt(svg.attr('width').substr(0, svg.attr('width').length - 2))
   scaleY = parseInt(svg.attr('height').substr(0, svg.attr('height').length - 2))
