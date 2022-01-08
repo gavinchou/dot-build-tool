@@ -44,7 +44,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
 </style>
 
-<script xlink:href="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.0.min.js">
+<script xlink:href="https://cdn.bootcdn.net/ajax/libs/jquery/3.4.0/jquery.min.js">
 </script>
 <script>
 <![CDATA[
@@ -89,13 +89,28 @@ function processClick() {
     // highlight current node first
     $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
     // console.log($(this).parent());
-    // console.log(title);
     var highlight = function(title) {
-      // for all adj, Node
+      // FIXME: this algorithm is not efficitent enough
+      // for all adj. Node,
       allEdgeTitles.each(function(index) {
         // console.log($(this).text());
+        // TODO: process '->' in a node/edge name
         var arrow = $(this).text().split('->'); // &#45;&gt;
-        if (!(arrow[0] === title || arrow[1] === title)) {
+        // process arrows with ports such as n1:port1 -> n2:port2
+        arrow.forEach(function (item, idx, array) {
+            var a = item.split('::');
+            var b = item.split(':');
+            if (b == 0) return; // b >= a
+            // possible port, we can just guess for now due to there is no more
+            // info. for checking port except the title
+            for (var i = item.length; i > 0; --i) {
+              if (item[i] == ':' && item[i-1] == ':') return; // not port
+              else if (item[i] == ':' && item[i-1] != ':')
+                array[idx] = item.substring(0, i); // extract node name
+            }
+          }
+        );
+        if (!(arrow[0] === title || arrow[1] === title)) { // assume len == 2
           return;
         }
         // TODO: compare nodes that arrow heads attatched to
@@ -133,7 +148,7 @@ function processClick() {
 
 scaleX = 1
 scaleY = 1
-scaleStep = 0.10
+scaleStep = 0.20
 lastZoom = -1
 const minZoomInterval = 30.0
 
