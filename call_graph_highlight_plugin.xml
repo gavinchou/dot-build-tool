@@ -24,10 +24,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 <style>
 .node {
-  fill: blue;
+  fill: #dc2553;
 }
 .node:hover {
-  fill: lightblue;
+  fill: #dc255388;
 }
 .fade {
   opacity: 0.2;
@@ -36,11 +36,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   opacity: 1.0;
 }
 .arrow-path {
-  stroke: blue;
+  stroke: #dc2553;
 }
 .arrow-head-tail {
-  fill: blue;
-  stroke: blue;
+  fill: #dc2553;
+  stroke: #dc2553;
 }
 </style>
 
@@ -64,7 +64,7 @@ function processClick() {
   var urlParams = new URLSearchParams(location.search);
   var s = urlParams.get("highlightStyle");
   if (s != null) {
-    style = s == "fade" ? FADE : s == "highlight" ? HIGHLIGHT : style;
+    style = s == "fade" ? FADE : (s == "highlight" ? HIGHLIGHT : style);
   }
 
   var nonHiClass = style == FADE ? 'fade' : 'none';
