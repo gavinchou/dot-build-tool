@@ -54,6 +54,9 @@ const HIGHLIGHT = 1;
 const FADE = 2;
 var style = HIGHLIGHT;
 
+var gDontShowInstruction = false;
+var gResizeViewOnLoad = false;
+
 function processClick() {
   var allNodes = $('.node');
   var allEdges = $('.edge');
@@ -157,6 +160,7 @@ const minZoomInterval = 30.0
  * @relies
  */
 function resizeView(svg) {
+  if (!gResizeViewOnLoad) return;
   var windowWidth = window.innerWidth;
   var windowHeight = window.innerHeight;
   var unit = svg.attr('width').substr(-2);
@@ -239,21 +243,93 @@ function processZoom() {
   window.addEventListener("mousewheel", wheelHandle, {passive: false});
 }
 
-var show_instruction = true
-function instruction() {
-  if (!show_instruction) {
-    return
-  }
+function updateConfFromSearchString() {
+  var urlParams = new URLSearchParams(location.search);
+
+  // only "true", "false" and "" are accepted
+  // if flag is given with no value ("") assigned, it intends to be true
+  const getBoolValue = function(name, origVal) {
+    var v = !urlParams.get(name) ? "" : urlParams.get(name).toLowerCase();
+    return v == "true" || urlParams.get(name) == "" ? true : (v == "false" ? false : origVal);
+  };
+  gDontShowInstruction = getBoolValue("dontShowInstruction", gDontShowInstruction);
+  gResizeViewOnLoad = getBoolValue("resizeViewOnLoad", gResizeViewOnLoad);
+}
+
+async function showInstruction() {
+  if (gDontShowInstruction) return;
   inst = "* click any node to highlight specific path\n"
-  inst += "* press ESC to cancel highlight\n"
-  inst += "* ctrl+scroll to zoom in/out"
+       + "* press ESC to cancel highlight\n"
+       + "* ctrl+scroll to zoom in/out";
+  var svg = document.getElementsByTagName('svg')[0];
+  var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  // Use fixed dimenssion to skip determining of transformation of the svg.
+  rect.setAttribute('height', 10000); // svg.getAttribute('height')
+  rect.setAttribute('width', 10000); // svg.getAttribute('width')
+  rect.setAttribute('style', "fill:#555555ee");
+  rect.setAttribute('id', "__highlight_instruction__");
+  (async () => { svg.appendChild(rect); })();
+  await sleep(100); // Tricy: sleep is needed, don't know why, but it works...
   alert(inst);
+  (async () => { svg.removeChild(rect); })();
+}
+
+var sleep = (delay_ms) => { return new Promise(r => setTimeout(r, delay_ms)); };
+
+/**
+ * Focus to (scroll into view) the first element with tag
+ * `<title>The title</title>`
+ * The tag title is the node name in graphviz, which should be unique, if not,
+ * we keep it ambiguous and focus to the first occurence.
+ *
+ * @param title title content
+ */
+async function focusElement(title) {
+  // Node name is title.
+  // We can also find edge by title, edge arrow "->" in html is "-&gt;"
+  for (var i of document.getElementsByTagName("title")) { 
+    // console.log(i.innerHTML + " == " + title);
+    if (i.innerHTML != title) continue;
+    var p = i.parentElement;
+
+    // behavior Optional:
+    // Defines the transition animation. One of auto or smooth. Defaults to auto.
+    // block Optional:
+    // Defines vertical alignment. One of start, center, end, or nearest. Defaults to start.
+    // inline Optional:
+    // Defines horizontal alignment. One of start, center, end, or nearest. Defaults to nearest.
+    p.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
+
+    var n = 5;
+    var flash = async () => {
+      var backup = p.getAttribute("style");
+      while (n--) {
+        p.setAttribute("style", "display:none") // disappear
+        await sleep(200);
+        p.setAttribute("style", backup) // appear
+        await sleep(500);
+      }
+    };
+    flash();
+    // break; // we can continue without breaking for multiple elments
+  }
+}
+
+function processFocus() {
+  var urlParams = new URLSearchParams(location.search);
+  var s = urlParams.get("focus");
+  if (s == null || s.length < 1) {
+    return;
+  }
+  focusElement(s);
 }
 
 $(document).ready(function() {
+  updateConfFromSearchString();
   processClick();
   processZoom();
-  instruction();
+  processFocus();
+  showInstruction();
 });
 
 ]]>
