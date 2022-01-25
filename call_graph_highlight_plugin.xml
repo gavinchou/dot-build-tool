@@ -243,17 +243,31 @@ function processZoom() {
   window.addEventListener("mousewheel", wheelHandle, {passive: false});
 }
 
-function updateConfFromSearchString() {
+function updateConf() {
+  // Update conf from search string
   var urlParams = new URLSearchParams(location.search);
 
-  // only "true", "false" and "" are accepted
-  // if flag is given with no value ("") assigned, it intends to be true
+  // Only "true", "false" and "" are accepted.
+  // If the flag is given with no value ("") assigned, it intends to be true
   const getBoolValue = function(name, origVal) {
     var v = !urlParams.get(name) ? "" : urlParams.get(name).toLowerCase();
     return v == "true" || urlParams.get(name) == "" ? true : (v == "false" ? false : origVal);
   };
   gDontShowInstruction = getBoolValue("dontShowInstruction", gDontShowInstruction);
   gResizeViewOnLoad = getBoolValue("resizeViewOnLoad", gResizeViewOnLoad);
+
+  // Update conf from graph data.
+  // What the user defined in graphviz doc is the highest priority.
+  // Config format example:
+  // __graph_js_config__ [label="gDontShowInstruction=true;gResizeViewOnLoad=true;" shape=plaintext fontcolor="#00000001" id="\N"]
+  var graphConf = document.getElementById("__graph_js_config__");
+  if (graphConf == null) return;
+  graphConf.setAttribute("style", "display:none"); // make it invisable
+  graphConf = graphConf.getElementsByTagName("text");
+  if (graphConf == null || graphConf.length < 1) return;
+  graphConf = graphConf[0];
+  try { eval(graphConf.innerHTML); }
+  catch(e) { console.log("__graph_js_config__ error."); console.log(e); };
 }
 
 async function showInstruction() {
@@ -325,7 +339,7 @@ function processFocus() {
 }
 
 $(document).ready(function() {
-  updateConfFromSearchString();
+  updateConf();
   processClick();
   processZoom();
   processFocus();
