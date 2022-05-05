@@ -163,23 +163,36 @@ scaleStep = 0.20
 lastZoom = -1
 const minZoomInterval = 30.0
 
+// 1mm ≅ 3.7795px
+// 1pt ≅ 1.3333px
+// 1in = 96px
+// 1pc = 16px
+function pixelFactor(unit) {
+  if (unit == null || unit == "" || unit == "px") return 1;
+  if (unit == "pt") return 1.3333;
+  if (unit == "in") return 96;
+  if (unit == "pc") return 16;
+  return 1;
+}
+
 /**
+ * TODO: resize with certain scale, and zooming process depends on this method
+ * 
  * @param svg the svg to resize
  * @relies
  */
 function resizeView(svg) {
   if (!gResizeViewOnLoad) return;
-  var windowWidth = window.innerWidth;
+  var windowWidth = window.innerWidth; // window height and width are measured in px
   var windowHeight = window.innerHeight;
   var unit = svg.attr('width').substr(-2);
   if (!isNaN(parseInt(unit))) unit = "";
   var svgWidth = parseInt(svg.attr('width').substr(0, svg.attr('width').length - unit.length));
   var svgHeight = parseInt(svg.attr('height').substr(0, svg.attr('height').length - unit.length));
-  // TODO: consider unit
 
   var scale = Math.min(windowWidth / svgWidth, windowHeight / svgHeight);
-  svgWidth = Math.floor(svgWidth * scale);
-  svgHeight = Math.floor(svgHeight * scale);
+  svgWidth = Math.floor(svgWidth * scale) / pixelFactor(unit);
+  svgHeight = Math.floor(svgHeight * scale) / pixelFactor(unit);
 
   svg.attr('width',  svgWidth + unit);
   svg.attr('height', svgHeight + unit);
@@ -224,22 +237,45 @@ function processZoom() {
       // the ratio of cursor's position to the svg's top-left remains the same
       // after zooming/scrolling:
       // oldCursorX / oldSvgWidth == newCursorX / newSvgWidth
-      // oldCursorX = oldScrollX + evt.screenX
-      // newCursorX = newScrollX + evt.screenX
+      // oldCursorY / oldSvgHeight == newCursorY / newSvgHeight
+      // newSvgWidth / oldSvgWidth == rate
+      //
+      // ATTN: If the window is at the bottom-right corner of svg, we SHOULD NOT
+      //       move scroll bar when zoom out, because it's the very last screen
+      //       to display.
+      //
+      //           <        svgWidth          >       x: cursor position 
+      //         ^ +--------------------------+          relitive to window
+      //           |                          |
+      //           |      +---------------+   |<-scrollY ^
+      //           |      |               |   |
+      // svgHeight |      |      (cx,cy)  |   |       winHeight
+      //           |      |         x     |   |
+      //           |      +---------------+   |          v
+      //           |                          |
+      //         v +--------------------------+
+      //                  ^
+      //               scrollX
+      //                  <    winWidth   >
+      //
+
       oldScrollX = window.pageXOffset
       oldScrollY = window.pageYOffset
-      scrollX = 0
-      scrollY = 0
-      if (scaleX > window.innerWidth) {
-        scrollX = parseInt(
-                          (oldScrollX + evt.screenX) * rate - evt.screenX + 0.5)
+      var scrollX = oldScrollX
+      var scrollY = oldScrollY
+
+      if (scaleX * pixelFactor('pt') > window.innerWidth 
+          && (rate > 1
+            || 1*window.innerWidth + oldScrollX < document.documentElement.scrollWidth)) { // last screen
+          scrollX = parseInt((oldScrollX + evt.screenX)*rate - evt.screenX + 0.5);
       }
-      if (scaleY > window.innerHeight) {
-        scrollY = parseInt(
-                          (oldScrollY + evt.screenY) * rate - evt.screenY + 0.5)
+      if (scaleY * pixelFactor('pt') > window.innerHeight
+          && (rate > 1
+            || 1*window.innerHeight + oldScrollY < document.documentElement.scrollHeight)) { // last screen
+        scrollY = parseInt((oldScrollY + evt.screenY)*rate - evt.screenY + 0.5) ;
       }
       window.scroll({top: scrollY, left: scrollX, behavor: 'smooth'})
-      // console.log('scroll to fit cursor ' + scrollX + ' ' + scrollY)
+      // console.log('scroll to fit cursor ' + scrollX + ' ' + scrollY);
 
       lastZoom = Date.now()
 
@@ -252,6 +288,19 @@ function processZoom() {
 }
 
 function updateConf() {
+  // Update conf from graph data.
+  // Config format example:
+  // __graph_js_config__ [label="gDontShowInstruction=true;gResizeViewOnLoad=true;" shape=plaintext fontcolor="#00000001" id="\N"]
+  var graphConf = document.getElementById("__graph_js_config__");
+  if (graphConf == null) return;
+  graphConf.setAttribute("style", "display:none"); // make it invisable
+  graphConf = graphConf.getElementsByTagName("text");
+  if (graphConf == null || graphConf.length < 1) return;
+  graphConf = graphConf[0];
+  try { eval(graphConf.innerHTML); }
+  catch(e) { console.log("__graph_js_config__ error."); console.log(e); };
+
+  // What the user defined in url is the highest priority.
   // Update conf from search string
   var urlParams = new URLSearchParams(location.search);
 
@@ -263,19 +312,6 @@ function updateConf() {
   };
   gDontShowInstruction = getBoolValue("dontShowInstruction", gDontShowInstruction);
   gResizeViewOnLoad = getBoolValue("resizeViewOnLoad", gResizeViewOnLoad);
-
-  // Update conf from graph data.
-  // What the user defined in graphviz doc is the highest priority.
-  // Config format example:
-  // __graph_js_config__ [label="gDontShowInstruction=true;gResizeViewOnLoad=true;" shape=plaintext fontcolor="#00000001" id="\N"]
-  var graphConf = document.getElementById("__graph_js_config__");
-  if (graphConf == null) return;
-  graphConf.setAttribute("style", "display:none"); // make it invisable
-  graphConf = graphConf.getElementsByTagName("text");
-  if (graphConf == null || graphConf.length < 1) return;
-  graphConf = graphConf[0];
-  try { eval(graphConf.innerHTML); }
-  catch(e) { console.log("__graph_js_config__ error."); console.log(e); };
 }
 
 async function showInstruction() {
