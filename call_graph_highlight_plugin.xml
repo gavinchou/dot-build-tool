@@ -22,6 +22,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -->
 
+<!-- TODO: use pushState to solve in-page nevigation/redirect -->
+
 <style>
 .highlight-node {
   fill: #ffaaaa;
@@ -100,10 +102,10 @@ function processClick() {
     // console.log($(this).parent());
     var highlight = function(title) {
       // FIXME: this algorithm is not efficitent enough
-      // for all adj. Node,
+      //        for all adj. Node,
       allEdgeTitles.each(function(index) {
         // console.log($(this).text());
-        // TODO: process '->' in a node/edge name
+        // ATTN: we have to process '->' in a node/edge name later.
         var arrow = $(this).text().split('->'); // &#45;&gt;
         // process arrows with ports such as n1:port1 -> n2:port2
         arrow.forEach(function (item, idx, array) {
@@ -119,9 +121,38 @@ function processClick() {
             }
           }
         );
-        if (!(arrow[0] === title || arrow[1] === title)) { // assume len == 2
-          return;
+
+        // We guess the node name from the edge text. e.g:
+        // a->b->c  ->  d->e->f, the third arrow is the real "delemiter".
+        // Guess by iterating the arrow elements, to decide if we can SHOULD
+        // continue searching:
+        //            a ==> b->c->d->e->f
+        //            a->b ==> c->d->e->f
+        //            a->b->c ==> d->e->f
+        var continueSearching = false;
+        var from = "";
+        var to = "";
+        // arrow.length is almost equal to 2 in all cases,
+        // or fairly small enough, no need to optimize this algorithm
+        for (var i = 1; i < arrow.length; ++i) { 
+          from = arrow[0];
+          for (var j = 1; j < i; ++j) { // this loop can be eliminated
+            from = from + "->" + arrow[j];
+          }
+          to = arrow[i];
+          for (var j = i + 1; j < arrow.length; ++j) {
+            to = to + "->" + arrow[j];
+          }
+
+          // if (arrow.length > 2) console.log(from + " ==> " + to);
+
+          if (from === title || to === title) {
+            continueSearching = true;
+            break; // bingo
+          }
         }
+        if (!continueSearching) return;
+
         // TODO: compare nodes that arrow heads attatched to
         $(this).parent().find('path').attr('class', arrowPathClass);
         $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
@@ -130,7 +161,7 @@ function processClick() {
         // console.log(arrow);
         allNodeTitles.each(function(index) {
           // process parent node only
-          if (!($(this).text() === arrow[0])) {
+          if (!($(this).text() === from)) {
             return;
           }
           if ($(this).parent().find('[fill]').attr('class') === hiClass) {
@@ -138,7 +169,7 @@ function processClick() {
           }
           $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
           $(this).parent().find('text').attr('class', hiClassText);
-          highlight(arrow[0]);
+          highlight(from);
         });
       });
     };
