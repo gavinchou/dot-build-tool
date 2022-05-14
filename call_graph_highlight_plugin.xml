@@ -57,10 +57,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // configure to switch highlight effect
 const HIGHLIGHT = 1;
 const FADE = 2;
-var style = HIGHLIGHT;
+// configure to change highlight direction, default upwards
+const UPWARDS = 1;
+const DOWNWARDS = 2;
 
+var style = HIGHLIGHT;
 var gDontShowInstruction = false;
 var gResizeViewOnLoad = false;
+var gHighlightDirection = UPWARDS;
 
 function processClick() {
   var allNodes = $('.node');
@@ -101,76 +105,89 @@ function processClick() {
     $(this).parent().find('text').attr('class', hiClassText);
     // console.log($(this).parent());
     var highlight = function(title) {
-      // FIXME: this algorithm is not efficitent enough
-      //        for all adj. Node,
-      allEdgeTitles.each(function(index) {
+      // FIXME: This algorithm is not efficitent enough, the current process is
+      //        to build a subgraph/subtree every time a node is clicked.
+      //        We may need to build a diagraph in-memory with allEdge and
+      //        allNodes, and then search that DAG to eliminate repeated
+      //        global search.
+      allEdgeTitles.each(function(index) { // search all adj. nodes
         // console.log($(this).text());
-        // ATTN: we have to process '->' in a node/edge name later.
-        var arrow = $(this).text().split('->'); // &#45;&gt;
-        // process arrows with ports such as n1:port1 -> n2:port2
-        arrow.forEach(function (item, idx, array) {
-            var a = item.split('::');
-            var b = item.split(':');
-            if (b == 0) return; // b >= a
-            // possible port, we can just guess for now due to there is no more
-            // info. for checking port except the title
-            for (var i = item.length; i > 0; --i) {
-              if (item[i] == ':' && item[i-1] == ':') return; // not port
-              else if (item[i] == ':' && item[i-1] != ':')
-                array[idx] = item.substring(0, i); // extract node name
-            }
-          }
-        );
-
-        // We guess the node name from the edge text. e.g:
-        // a->b->c  ->  d->e->f, the third arrow is the real "delemiter".
-        // Guess by iterating the arrow elements, to decide if we can SHOULD
-        // continue searching:
-        //            a ==> b->c->d->e->f
-        //            a->b ==> c->d->e->f
-        //            a->b->c ==> d->e->f
-        var continueSearching = false;
-        var from = "";
-        var to = "";
-        // arrow.length is almost equal to 2 in all cases,
-        // or fairly small enough, no need to optimize this algorithm
-        for (var i = 1; i < arrow.length; ++i) { 
-          from = arrow[0];
-          for (var j = 1; j < i; ++j) { // this loop can be eliminated
-            from = from + "->" + arrow[j];
-          }
-          to = arrow[i];
-          for (var j = i + 1; j < arrow.length; ++j) {
-            to = to + "->" + arrow[j];
-          }
-
-          // if (arrow.length > 2) console.log(from + " ==> " + to);
-
-          if (from === title || to === title) {
-            continueSearching = true;
-            break; // bingo
+        // Process wired names with arrows and colons
+        // a:b->c:d => e:f->g::
+        var edgeText = $(this).text();
+        var posArrow = [];
+        for (var i = 0; i < edgeText.length; ++i) {
+          if (i < edgeText.length - 1
+              && edgeText[i] == '-' && edgeText[i + 1] == '>') {
+            posArrow.push(i);
           }
         }
-        if (!continueSearching) return;
+        // console.log(posArrow);
 
-        // TODO: compare nodes that arrow heads attatched to
+        var from = null;
+        var to = null;
+        var fromMatched = false;
+        var toMatched = false;
+        for (var i in posArrow) {
+          from = [edgeText.substr(0, posArrow[i])];
+          to = [edgeText.substr(posArrow[i] + 2)];
+          // ATTN: port name must not contain ':', of course we can resolve that
+          //       case here, however, it is unnecessary.
+          var c = from[0].lastIndexOf(':');
+          if (c >= 0) from.push(from[0].substr(0, c));
+          var d = to[0].lastIndexOf(':');
+          if (d >= 0) to.push(to[0].substr(0, d));
+          for (var j = from.length - 1; j >= 0; --j) { // guess without port first
+            if (from[j] === title) { // current edge: thisNode(title) -> otherNode
+              fromMatched = true;
+              break;
+            }
+          }
+          for (var k = to.length - 1; k >= 0; --k) {
+            if (to[k] === title) { // current edge: otherNode -> thisNode(title)
+              toMatched = true;
+              break;
+            }
+          }
+          if (fromMatched || toMatched) break;
+          // console.log(from + " => " + to + " @ " + title);
+        }
+        var nextNode = []; // POSSIBLE nextNode titles
+        if (fromMatched) {
+          if (gHighlightDirection == DOWNWARDS) nextNode = to; // search downwards
+        } else if (toMatched) {
+          if (gHighlightDirection == UPWARDS) nextNode = from; // search upwards
+        } else {
+          return; // nothing matched we are done
+        }
+        // console.log(nextNode);
+
+        // Highlight current edge/arrow
+        // TODO: make the first level or the last level edge highlight optional
         $(this).parent().find('path').attr('class', arrowPathClass);
         $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
         $(this).parent().find('ellipse').attr('class', arrowHeadTailClass);
         $(this).parent().find('text').attr('class', arrowTextClass);
-        // console.log(arrow);
-        allNodeTitles.each(function(index) {
-          // process parent node only
-          if (!($(this).text() === from)) {
-            return;
-          }
-          if ($(this).parent().find('[fill]').attr('class') === hiClass) {
-            return;
-          }
-          $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
-          $(this).parent().find('text').attr('class', hiClassText);
-          highlight(from);
-        });
+
+        // We have to try out all possible titles due to possible colons in the
+        // node name
+        for (var i in nextNode) {
+          var done = false;
+          allNodeTitles.each(function(index) {
+            // Filter out unrelated nodes
+            if (!($(this).text() === nextNode[i])) {
+              return;
+            }
+            done = true; // We are done trying searching next node
+            if ($(this).parent().find('[fill]').attr('class') === hiClass) {
+              return;
+            }
+            $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
+            $(this).parent().find('text').attr('class', hiClassText);
+            highlight(nextNode[i]);
+          });
+          if (done) break;
+        }
       });
     };
     var clickedTitle = $(this).parent().find('title').text();
