@@ -28,11 +28,11 @@ There are some command line utilities
 2. ~~`cat`, every unix-like system should have this command~~
 3. ~~web browsers, Chrome or Safari, everyone should have a browser...~~
 
-Here is an example to install grapviza 3.0, it works both on Linux and MacOSX.
-(You may change the installation path as need.)
+Here is an example to install graphviz 3.0, it works both on Linux and MacOSX.
+(You may change the installation path as needed.)
 
 ```shell
-# install grapviz dependency
+# install graphviz dependency
 wget https://github.com/libexpat/libexpat/releases/download/R_2_4_8/expat-2.4.8.tar.bz2 --no-check-certificate
 tar xf expat-2.4.8.tar.bz2
 pushd expat-2.4.8
@@ -40,7 +40,7 @@ pushd expat-2.4.8
 make install -j8
 popd
 
-# install grapviz
+# install graphviz
 wget https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/3.0.0/graphviz-3.0.0.tar.xz --no-check-certificate
 tar xf graphviz-3.0.0.tar.xz
 pushd graphviz-3.0.0
@@ -58,14 +58,14 @@ sh build_call_graph.sh demo.dot test.svg
 # open test.svg in a web browser like Chrome to view the result
 # for MacOSX you can type to open with chrome
 open -a 'google chrome' test.svg
-# or, for MacOSX you can type to open with chrome
+# or, for MacOSX you can type to open with safari
 open -a 'safari' test.svg
 
 # enjoy
 ```
 
 <font color="#ff0000">
-Note: you also need to connect to the Internet for fetching jquery.
+Note: you also need to connect to the Internet for fetching jquery when the browser loads svg.
 </font>
 
 ### Usage

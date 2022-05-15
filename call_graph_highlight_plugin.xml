@@ -1,7 +1,7 @@
 <!--
 The following is the call graph plugin.
 
-Copyright 2019, Gavin Chou, gavineaglechou@gmail.com
+Copyright 2022, Gavin Chou, gavineaglechou@gmail.com
 http://github.com/gavinchou/dot-build-tool.git
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -360,6 +360,17 @@ function updateConf() {
   };
   gDontShowInstruction = getBoolValue("dontShowInstruction", gDontShowInstruction);
   gResizeViewOnLoad = getBoolValue("resizeViewOnLoad", gResizeViewOnLoad);
+
+  var hd = urlParams.get("highlightDirection");
+  if (hd != null) {
+    if (hd == "UPWARDS" || hd == "upwards" || hd == 1) {
+      gHighlightDirection = UPWARDS;
+    } else if (hd == "DOWNWARDS" || hd == "downwards" || hd == 2) {
+      gHighlightDirection = DOWNWARDS;
+    } else {
+      console.log("not supported value: " + hd + " for gHighlightDirection");
+    }
+  }
 }
 
 async function showInstruction() {
