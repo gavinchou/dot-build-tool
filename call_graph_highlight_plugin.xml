@@ -48,9 +48,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   stroke: #ee7777;
 }
 </style>
-
-<script xlink:href="https://cdn.bootcdn.net/ajax/libs/jquery/3.4.0/jquery.min.js">
-</script>
+<!-- Local script first, fall back if failed -->
+<script xlink:href="https://code.jquery.com/jquery-3.4.0.min.js"></script>
+<script><![CDATA[
+  // Failed to execute 'write' on 'Document': Only HTML documents support write()
+  // window.jQuery || document.write('<script xlink:href="https://code.jquery.com/jquery-3.4.0.min.js"></script>')
+  // This works in console but not here
+  // window.jQuery || import("https://code.jquery.com/jquery-3.4.0.min.js");
+]]></script>
 <script>
 <![CDATA[
 
@@ -65,6 +70,7 @@ var style = HIGHLIGHT;
 var gDontShowInstruction = false;
 var gResizeViewOnLoad = false;
 var gHighlightDirection = UPWARDS;
+var gDisableZooming = false; // force user to use browser's zooming function
 
 function processClick() {
   var allNodes = $('.node');
@@ -162,12 +168,14 @@ function processClick() {
         }
         // console.log(nextNode);
 
-        // Highlight current edge/arrow
-        // TODO: make the first level or the last level edge highlight optional
-        $(this).parent().find('path').attr('class', arrowPathClass);
-        $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
-        $(this).parent().find('ellipse').attr('class', arrowHeadTailClass);
-        $(this).parent().find('text').attr('class', arrowTextClass);
+        // Highlight current edge/arrow.
+        // The first level and the last level edge highlight are unnecessary
+        if (nextNode.length != 0) {
+          $(this).parent().find('path').attr('class', arrowPathClass);
+          $(this).parent().find('polygon').attr('class', arrowHeadTailClass);
+          $(this).parent().find('ellipse').attr('class', arrowHeadTailClass);
+          $(this).parent().find('text').attr('class', arrowTextClass);
+        }
 
         // We have to try out all possible titles due to possible colons in the
         // node name
@@ -175,13 +183,9 @@ function processClick() {
           var done = false;
           allNodeTitles.each(function(index) {
             // Filter out unrelated nodes
-            if (!($(this).text() === nextNode[i])) {
-              return;
-            }
+            if (!($(this).text() === nextNode[i])) return;
             done = true; // We are done trying searching next node
-            if ($(this).parent().find('[fill]').attr('class') === hiClass) {
-              return;
-            }
+            if ($(this).parent().find('[fill]').attr('class') === hiClass) return;
             $(this).parent().find('[fill]:not(text)').attr('class', hiClass);
             $(this).parent().find('text').attr('class', hiClassText);
             highlight(nextNode[i]);
@@ -230,7 +234,7 @@ function pixelFactor(unit) {
  * @relies
  */
 function resizeView(svg) {
-  if (!gResizeViewOnLoad) return;
+  if (gDisableZooming || !gResizeViewOnLoad) return;
   var windowWidth = window.innerWidth; // window height and width are measured in px
   var windowHeight = window.innerHeight;
   var unit = svg.attr('width').substr(-2);
@@ -256,6 +260,10 @@ function processZoom() {
 
   wheelHandle = function (evt) {
     if (evt.ctrlKey == true) {
+      if (gDisableZooming) {
+        console.log("zooming is disabled, plz use browser's zooming function");
+        return true; // do not consume the event
+      }
       evt.preventDefault();
       // console.log(
       //        evt.wheelDelta + ' ' + Date.now() + ' ' + scaleX + ' ' + scaleY)
@@ -360,6 +368,7 @@ function updateConf() {
   };
   gDontShowInstruction = getBoolValue("dontShowInstruction", gDontShowInstruction);
   gResizeViewOnLoad = getBoolValue("resizeViewOnLoad", gResizeViewOnLoad);
+  gDisableZooming = getBoolValue("disableZooming", gDisableZooming);
 
   var hd = urlParams.get("highlightDirection");
   if (hd != null) {
