@@ -348,13 +348,16 @@ function updateConf() {
   // Config format example:
   // __graph_js_config__ [label="gDontShowInstruction=true;gResizeViewOnLoad=true;" shape=plaintext fontcolor="#00000001" id="\N"]
   var graphConf = document.getElementById("__graph_js_config__");
-  if (graphConf == null) return;
-  graphConf.setAttribute("style", "display:none"); // make it invisable
-  graphConf = graphConf.getElementsByTagName("text");
-  if (graphConf == null || graphConf.length < 1) return;
-  graphConf = graphConf[0];
-  try { eval(graphConf.innerHTML); }
-  catch(e) { console.log("__graph_js_config__ error."); console.log(e); };
+  while (graphConf != null) {
+    graphConf.setAttribute("style", "display:none"); // make it invisable
+    graphConf = graphConf.getElementsByTagName("text");
+    if (graphConf.length < 1) break;
+    graphConf = graphConf[0];
+    console.log(graphConf);
+    try { eval(graphConf.innerHTML); }
+    catch(e) { console.log("__graph_js_config__ error."); console.log(e); };
+    break;
+  }
 
   // What the user defined in url is the highest priority.
   // Update conf from search string
